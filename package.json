@@ -1,0 +1,18 @@
+{
+    "name": "potion",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "build": "rollup --config --name Potion",
+        "serve": "http-server ./dist/"
+    },
+    "author": "Poumon",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "@rollup/plugin-commonjs": "^28.0.2",
+        "@rollup/plugin-node-resolve": "^16.0.0",
+        "@rollup/plugin-terser": "^0.4.4",
+        "rollup": "^4.30.1"
+    }
+}
