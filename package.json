@@ -1,18 +1,35 @@
 {
-    "name": "potion",
-    "version": "1.0.0",
-    "main": "index.js",
+    "name": "@poumon/potion",
+    "version": "1.0.3",
+    "module": "dist/potion.esm.min.js",
+    "browser": "dist/potion.umd.min.js",
+    "main": "dist/potion.esm.min.js",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "build": "rollup --config --name Potion",
+        "build": "rollup -c --name Potion",
+        "watch": "rollup -c -w --name Potion",
         "serve": "http-server ./dist/"
     },
-    "author": "Poumon",
+    "author": "Poumon <caedrikbl@gmail.com> (https://poumon.io)",
     "license": "ISC",
-    "description": "",
-    "dependencies": {
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/caezd/potion.git"
+    },
+    "devDependencies": {
         "@rollup/plugin-commonjs": "^28.0.2",
         "@rollup/plugin-node-resolve": "^16.0.0",
         "@rollup/plugin-terser": "^0.4.4",
-        "rollup": "^4.30.1"
-    }
+        "fs": "^0.0.1-security",
+        "rollup": "^4.30.1",
+        "rollup-plugin-peer-deps-external": "^2.2.4"
+    },
+    "bugs": {
+        "url": "https://github.com/caezd/potion/issues"
+    },
+    "homepage": "https://github.com/caezd/potion#readme",
+    "description": ""
 }

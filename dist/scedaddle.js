@@ -1,4 +1,4 @@
-var Potion = (function () {
+(function () {
     'use strict';
 
     class Potion {
@@ -21,13 +21,14 @@ var Potion = (function () {
                 ...settings,
             };
             this.templates = {};
-            this.filters = {};
+            this.filers = {};
             this.pattern = new RegExp(
                 `${this.settings.start}\s*(${this.settings.path})\s*${this.settings.end}`,
                 "gi"
             );
-            this.init();
+
             this.create(template, data);
+            this.init();
         }
 
         init() {
@@ -127,7 +128,7 @@ var Potion = (function () {
 
             this.filters[name] = this.filters[name] || [];
 
-            const fns = this.filters[name];
+            const fns = filters[filterName];
             fns.push([fn, priority || 0]);
             fns.sort(this.sortByPriority);
             return fn;
@@ -177,8 +178,8 @@ var Potion = (function () {
 
                 const startPos = match.index;
                 const endPos = this.pattern.lastIndex;
-                const templateStart = template.slice(0, startPos);
-                let templateEnd = template.slice(endPos);
+                const templateStart = this.template.slice(0, startPos);
+                let templateEnd = this.template.slice(endPos);
 
                 // Si la substitution est une fonction, on appelle et utilise la valeur retournée
                 if (typeof substituted === "function") {
