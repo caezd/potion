@@ -1,21 +1,42 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 
-export default {
-    input: "src/main.js",
-    output: [
-        {
-            file: "dist/potion.js",
-            format: "iife",
-        },
-    ],
-    plugins: [
-        commonjs(),
-        resolve({
-            browser: true,
-        }),
-    ],
-};
+const name = "potion";
+
+export default [
+    {
+        input: "src/main.js",
+        output: [
+            {
+                name,
+                file: "dist/potion.js",
+                format: "iife",
+            },
+        ],
+        plugins: [
+            commonjs(),
+            resolve({
+                browser: true,
+            }),
+        ],
+    },
+    {
+        input: "src/main-diet.js",
+        output: [
+            {
+                name,
+                file: "dist/potion-diet.js",
+                format: "iife",
+            },
+        ],
+        plugins: [
+            commonjs(),
+            resolve({
+                browser: true,
+            }),
+        ],
+    },
+];
 
 /* import { readFileSync } from "fs";
 import resolve from "@rollup/plugin-node-resolve";

@@ -1,7 +1,10 @@
-function Potion(template, data, customSettings = {}) {
+function potion(template, data, customSettings = {}) {
+    if (this instanceof potion) {
+        throw new Error("Don't call 'potion' with new");
+    }
     const defaultSettings = {
-        start: "{{",
-        end: "}}",
+        start: "[",
+        end: "]",
         path: "[a-z0-9_$][\\.a-z0-9_]*",
     };
 
@@ -12,7 +15,9 @@ function Potion(template, data, customSettings = {}) {
     let stopThisFilter = false;
 
     const pattern = new RegExp(
-        `\${settings.start}\s*(${settings.path})\s*\${settings.end}`,
+        `${escapeRegex(settings.start)}\s*(${settings.path})\s*${escapeRegex(
+            settings.end
+        )}`,
         "gi"
     );
 
@@ -36,10 +41,6 @@ function Potion(template, data, customSettings = {}) {
                     return dataLookup;
                 }
             }
-        });
-
-        addFilter("init", () => {
-            console.log("init");
         });
     }
 
@@ -202,7 +203,7 @@ function Potion(template, data, customSettings = {}) {
     init();
 
     // Render the template
-    return create(template, data);
+    return create(template, data, settings);
 }
 
-export default Potion;
+export default potion;

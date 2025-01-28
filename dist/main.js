@@ -1,13 +1,10 @@
-var potion = (function () {
+var Potion = (function () {
     'use strict';
 
-    function potion(template, data, customSettings = {}) {
-        if (this instanceof potion) {
-            throw new Error("Don't call 'potion' with new");
-        }
+    function Potion(template, data, customSettings = {}) {
         const defaultSettings = {
-            start: "[",
-            end: "]",
+            start: "{{",
+            end: "}}",
             path: "[a-z0-9_$][\\.a-z0-9_]*",
         };
 
@@ -17,9 +14,7 @@ var potion = (function () {
         let initialized = false;
 
         const pattern = new RegExp(
-            `${escapeRegex(settings.start)}\s*(${settings.path})\s*${escapeRegex(
-            settings.end
-        )}`,
+            `\${settings.start}\s*(${settings.path})\s*\${settings.end}`,
             "gi"
         );
 
@@ -44,10 +39,14 @@ var potion = (function () {
                     }
                 }
             });
+
+            addFilter("init", () => {
+                console.log("init");
+            });
         }
 
         function addFilter(name, fn, priority = 0) {
-            if (typeof fn !== "function") {
+            if (typeof name !== "string" || typeof fn !== "function") {
                 throw new TypeError(
                     "Invalid arguments: 'name' must be a string and 'fn' must be a function."
                 );
@@ -71,10 +70,6 @@ var potion = (function () {
                 }
             }
             return payload;
-        }
-
-        function escapeRegex(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         }
 
         function substitute(template, data) {
@@ -204,6 +199,6 @@ var potion = (function () {
         return create(template, data);
     }
 
-    return potion;
+    return Potion;
 
 })();
