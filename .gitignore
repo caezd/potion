@@ -3,3 +3,4 @@ src/
 package.json
 package-lock.json
 rollup.config.js
+.gitignore
