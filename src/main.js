@@ -15,11 +15,17 @@ function potion(template, data, customSettings = {}) {
     let stopThisFilter = false;
 
     const pattern = new RegExp(
+        `${escapeRegex(settings.start)}\s*(!?)\s*(${
+            settings.path
+        })\s*${escapeRegex(settings.end)}`,
+        "gi"
+    );
+    /* new RegExp(
         `${escapeRegex(settings.start)}\s*(${settings.path})\s*${escapeRegex(
             settings.end
         )}`,
         "gi"
-    );
+    ); */
 
     function init() {
         addFilter("token", (token, data, tag) => {
@@ -83,7 +89,8 @@ function potion(template, data, customSettings = {}) {
         let match;
 
         while ((match = pattern.exec(template)) !== null) {
-            const token = match[1];
+            const token = match[2];
+            console.log(match);
             let substituted = applyFilter("token", token, data, template);
 
             const startPos = match.index;
@@ -92,7 +99,7 @@ function potion(template, data, customSettings = {}) {
             let templateEnd = template.slice(endPos);
 
             if (typeof substituted === "function") {
-                substituted = substituted.call(data);
+                substituted = substituted.call(data, data);
             }
 
             if (
@@ -112,7 +119,10 @@ function potion(template, data, customSettings = {}) {
                     );
 
                     if (typeof substituted === "boolean") {
-                        subTemplate = substituted ? innerTemplate : "";
+                        console.log(substituted);
+                        subTemplate = !(substituted ^ (match[1] !== "!"))
+                            ? innerTemplate
+                            : "";
                     } else {
                         for (const key in substituted) {
                             if (substituted.hasOwnProperty(key)) {
