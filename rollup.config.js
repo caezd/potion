@@ -1,5 +1,7 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
+import external from "rollup-plugin-peer-deps-external";
+import terser from "@rollup/plugin-terser";
 
 const name = "potion";
 
@@ -9,8 +11,12 @@ export default [
         output: [
             {
                 name,
-                file: "dist/potion.js",
+                file: "dist/potion.min.js",
                 format: "iife",
+            },
+            {
+                file: "dist/potion.esm.min.js",
+                format: "es",
             },
         ],
         plugins: [
@@ -25,15 +31,19 @@ export default [
         output: [
             {
                 name,
-                file: "dist/potion-diet.js",
+                file: "dist/diet/potion-diet.js",
                 format: "iife",
+            },
+            {
+                file: "dist/diet/potion-diet.esm.min.js",
+                format: "es",
             },
         ],
         plugins: [
+            terser(),
+            external({ includeDependencies: true }),
+            resolve(),
             commonjs(),
-            resolve({
-                browser: true,
-            }),
         ],
     },
 ];

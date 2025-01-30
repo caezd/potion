@@ -1,5 +1,5 @@
 function potion(template, data, { start = "[", end = "]" }) {
-    if (this instanceof Potion) {
+    if (this instanceof potion) {
         throw new Error("Don't call 'Potion' with new");
     }
     const path = "[a-z0-9_$][\\.a-z0-9_]*"; // e.g., config.person.name

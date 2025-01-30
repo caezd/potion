@@ -1,6 +1,6 @@
 {
     "name": "@poumon/potion",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "module": "dist/potion.esm.min.js",
     "browser": "dist/potion.umd.min.js",
     "main": "dist/potion.esm.min.js",

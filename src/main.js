@@ -27,7 +27,7 @@ function potion(template, data, customSettings = {}) {
         "gi"
     ); */
 
-    function init() {
+    function initFilters() {
         addFilter("token", (token, data, tag) => {
             const path = token.split(".");
             let dataLookup = data;
@@ -90,7 +90,6 @@ function potion(template, data, customSettings = {}) {
 
         while ((match = pattern.exec(template)) !== null) {
             const token = match[2];
-            console.log(match);
             let substituted = applyFilter("token", token, data, template);
 
             const startPos = match.index;
@@ -209,8 +208,30 @@ function potion(template, data, customSettings = {}) {
         return applyFilter("templateAfter", template);
     }
 
+    if (window && window.document) {
+        potion.renderFromDOM = function (domSettings = {}) {
+            const type = domSettings.type || settings.type || "template/potion";
+            const attr = domSettings.attr || settings.attr || "data-name";
+            const elements = document.querySelectorAll(
+                `template[type='${type}']`
+            );
+            const templatesInDom = {};
+            elements.forEach((elem, i) => {
+                const key = elem.getAttribute(attr) || `potion-${i}`;
+                templatesInDom[key] = elem.innerHTML;
+            });
+
+            templatesCache(templatesInDom);
+            return templatesInDom;
+        };
+
+        addFilter("init", function () {
+            potion.renderFromDOM();
+        });
+    }
+
     // Initial setup
-    init();
+    initFilters();
 
     // Render the template
     return create(template, data, settings);
