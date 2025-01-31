@@ -4,47 +4,48 @@ import external from "rollup-plugin-peer-deps-external";
 import terser from "@rollup/plugin-terser";
 
 const name = "potion";
+const plugins = [
+    terser(),
+    external({ includeDependencies: true }),
+    resolve(),
+    commonjs(),
+];
 
 export default [
+    {
+        input: "src/test.js",
+        output: [{ name: "test", file: "potion/test.js", format: "iife" }],
+        plugins: plugins,
+    },
     {
         input: "src/main.js",
         output: [
             {
                 name,
-                file: "dist/potion.min.js",
+                file: "potion/potion.min.js",
                 format: "iife",
             },
             {
-                file: "dist/potion.esm.min.js",
+                file: "potion/potion.esm.min.js",
                 format: "es",
             },
         ],
-        plugins: [
-            commonjs(),
-            resolve({
-                browser: true,
-            }),
-        ],
+        plugins: plugins,
     },
     {
         input: "src/main-diet.js",
         output: [
             {
                 name,
-                file: "dist/diet/potion-diet.js",
+                file: "potion-diet/potion.min.js",
                 format: "iife",
             },
             {
-                file: "dist/diet/potion-diet.esm.min.js",
+                file: "potion-diet/potion.esm.min.js",
                 format: "es",
             },
         ],
-        plugins: [
-            terser(),
-            external({ includeDependencies: true }),
-            resolve(),
-            commonjs(),
-        ],
+        plugins: plugins,
     },
 ];
 
