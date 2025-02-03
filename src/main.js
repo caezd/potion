@@ -121,7 +121,7 @@ var potion = (function initPotion(template, data, customSettings = {}) {
                                     innerTemplate,
                                     token
                                 );
-                                const loop = create(innerTemplate, loopData);
+                                const loop = Potion(innerTemplate, loopData);
                                 subTemplate += applyFilter(
                                     "loop",
                                     loop,
