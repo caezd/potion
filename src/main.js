@@ -169,6 +169,65 @@ var potion = (function initPotion(template, data, customSettings = {}) {
         return templates;
     }
 
+    function bindEvents(element, data) {
+        const attributes = [...element.attributes];
+
+        attributes.forEach((attr) => {
+            if (attr.name.startsWith("@")) {
+                const eventType = attr.name.slice(1); // Ex: "click"
+                let functionCall = attr.value.trim(); // Ex: "handleClick(42, 'test')"
+
+                // Extraction du nom de la fonction et des arguments
+                const match = functionCall.match(
+                    /^([a-zA-Z_$][a-zA-Z0-9_$]*)\((.*)\)$/
+                );
+                let functionName,
+                    args = [];
+
+                if (match) {
+                    functionName = match[1];
+                    args = match[2]
+                        .split(",")
+                        .map((arg) => arg.trim())
+                        .map((arg) => {
+                            if (arg === "true") return true;
+                            if (arg === "false") return false;
+                            if (!isNaN(arg)) return Number(arg);
+                            if (
+                                (arg.startsWith("'") && arg.endsWith("'")) ||
+                                (arg.startsWith('"') && arg.endsWith('"'))
+                            ) {
+                                return arg.slice(1, -1);
+                            }
+                            return data[arg] || arg;
+                        });
+                } else {
+                    functionName = functionCall;
+                }
+
+                if (typeof data[functionName] === "function") {
+                    element.removeEventListener(
+                        eventType,
+                        element._boundEvents?.[eventType]
+                    );
+
+                    const eventHandler = (event) => {
+                        data[functionName].apply(data, [event, ...args]);
+                    };
+
+                    element.addEventListener(eventType, eventHandler);
+
+                    element._boundEvents = element._boundEvents || {};
+                    element._boundEvents[eventType] = eventHandler;
+                } else {
+                    console.warn(
+                        `Potion: function '${functionName}' not found in data.`
+                    );
+                }
+            }
+        });
+    }
+
     function Potion(template, data) {
         if (!initialized) {
             initialized = true;
@@ -212,7 +271,10 @@ var potion = (function initPotion(template, data, customSettings = {}) {
         if (stgs.class) {
             newElement.classList.add(...stgs.class.split(" "));
         }
-
+        /* events */
+        [...newElement.querySelectorAll("*")].forEach((child) =>
+            bindEvents(child, data)
+        );
         template.parentNode.replaceChild(newElement, template);
 
         return newElement;
@@ -252,9 +314,125 @@ var potion = (function initPotion(template, data, customSettings = {}) {
                 customSettings
             );
         };
-    }
 
-    // Initial setup
+        /**
+         * FIBER
+         * @param {*} templateName
+         * @param {*} data
+         */
+
+        Potion.reactivity = renderPotionTemplate;
+
+        function renderPotionTemplate(templateName, data) {
+            const templateElement = document.querySelector(
+                `template[data-name='${templateName}']`
+            );
+            if (!templateElement)
+                throw new Error(
+                    `Potion: template with name '${templateName}' not found`
+                );
+
+            const templateContent =
+                templates[templateName] || templateElement.innerHTML;
+
+            const fiberRoot = {
+                dom: templateElement.parentNode,
+                props: { children: [templateContent] },
+                alternate: null,
+            };
+
+            function createDom(fiber) {
+                const div = document.createElement("div");
+                div.setAttribute("data-name", templateName);
+                div.innerHTML = substitute(fiber.props.children[0], data);
+                return div;
+            }
+
+            function commitRoot() {
+                commitWork(fiberRoot.child);
+            }
+
+            function commitWork(fiber) {
+                if (!fiber) return;
+
+                const parentDom = fiber.parent.dom;
+                if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
+                    parentDom.appendChild(fiber.dom);
+                } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+                    const newDom = createDom(fiber);
+                    if (parentDom.contains(fiber.dom)) {
+                        parentDom.replaceChild(newDom, fiber.dom);
+                    } else {
+                        parentDom.appendChild(newDom);
+                    }
+                    fiber.dom = newDom;
+                }
+
+                commitWork(fiber.child);
+                commitWork(fiber.sibling);
+                [...fiberRoot.dom.querySelectorAll("*")].forEach((child) =>
+                    bindEvents(child, data)
+                );
+            }
+
+            function workLoop() {
+                if (!fiberRoot.child) {
+                    fiberRoot.child = {
+                        dom: createDom(fiberRoot),
+                        parent: fiberRoot,
+                        props: fiberRoot.props,
+                        effectTag: "PLACEMENT",
+                    };
+                }
+                commitRoot();
+            }
+
+            function arrayProxy(target, key, value) {
+                if (Array.isArray(value)) {
+                    value = new Proxy(value, arrayProxyHandler);
+                }
+                target[key] = value;
+                fiberRoot.child.effectTag = "UPDATE";
+                workLoop();
+                return true;
+            }
+
+            const arrayProxyHandler = {
+                set(target, key, value) {
+                    if (key === "length" || target[key] === value) return true;
+                    target[key] = value;
+                    fiberRoot.child.effectTag = "UPDATE";
+                    workLoop();
+                    return true;
+                },
+                get(target, key) {
+                    if (typeof target[key] === "function") {
+                        return function (...args) {
+                            const result = target[key].apply(target, args);
+                            fiberRoot.child.effectTag = "UPDATE";
+                            workLoop();
+                            return result;
+                        };
+                    }
+                    return target[key];
+                },
+            };
+
+            const proxy = new Proxy(data, {
+                set: arrayProxy,
+                get(target, key) {
+                    if (Array.isArray(target[key])) {
+                        return new Proxy(target[key], arrayProxyHandler);
+                    }
+                    return target[key];
+                },
+            });
+
+            workLoop();
+
+            return proxy;
+        }
+    }
 
     // Render the template
     return Potion;
