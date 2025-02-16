@@ -53,23 +53,14 @@ var potion = (function initPotion(template, data, customSettings = {}) {
     });
 
     function applyFilter(name, payload, ...args) {
-        const fns = filters[name];
-        if (!fns) return payload;
-
-        for (const [fn] of fns) {
-            const substituted = fn(payload, ...args);
-            if (payload !== undefined && substituted !== undefined) {
-                payload = substituted;
-            }
-            if (substituted == null) {
-                payload = "";
-            }
+        return (filters[name] || []).reduce((result, [fn]) => {
             if (stopThisFilter) {
                 stopThisFilter = false;
-                break;
+                return result;
             }
-        }
-        return payload;
+            const substituted = fn(result, ...args);
+            return substituted !== undefined ? substituted : "";
+        }, payload);
     }
 
     function substitute(template, data) {
@@ -169,63 +160,189 @@ var potion = (function initPotion(template, data, customSettings = {}) {
         return templates;
     }
 
+    function parseEventArgs(arg, data) {
+        if (arg === "true") return true;
+        if (arg === "false") return false;
+        if (!isNaN(arg)) return Number(arg);
+        return arg.match(/^["'](.*)["']$/)
+            ? arg.slice(1, -1)
+            : data[arg] || arg;
+    }
+
     function bindEvents(element, data) {
-        const attributes = [...element.attributes];
+        [...element.attributes]
+            .filter((attr) => attr.name.startsWith("@"))
+            .forEach((attr) => {
+                // Exemple : "@click.stop.prevent.left" ou "@keyup.ctrl.shift.enter.exact"
+                const parts = attr.name.slice(1).split(".");
+                const eventType = parts[0];
+                const modifiers = parts.slice(1);
 
-        attributes.forEach((attr) => {
-            if (attr.name.startsWith("@")) {
-                const eventType = attr.name.slice(1); // Ex: "click"
-                let functionCall = attr.value.trim(); // Ex: "handleClick(42, 'test')"
-
-                // Extraction du nom de la fonction et des arguments
-                const match = functionCall.match(
-                    /^([a-zA-Z_$][a-zA-Z0-9_$]*)\((.*)\)$/
-                );
-                let functionName,
-                    args = [];
-
-                if (match) {
-                    functionName = match[1];
-                    args = match[2]
-                        .split(",")
-                        .map((arg) => arg.trim())
-                        .map((arg) => {
-                            if (arg === "true") return true;
-                            if (arg === "false") return false;
-                            if (!isNaN(arg)) return Number(arg);
-                            if (
-                                (arg.startsWith("'") && arg.endsWith("'")) ||
-                                (arg.startsWith('"') && arg.endsWith('"'))
-                            ) {
-                                return arg.slice(1, -1);
-                            }
-                            return data[arg] || arg;
-                        });
-                } else {
-                    functionName = functionCall;
+                // On accepte une expression du type "nomFonction(args)" ou simplement "nomFonction"
+                const regex = /^(\w+)(?:\((.*)\))?$/;
+                const match = attr.value.match(regex);
+                if (!match) {
+                    console.warn(
+                        "Potion: impossible de parser l'expression de l'événement:",
+                        attr.value
+                    );
+                    return;
                 }
+                const fnName = match[1];
+                const argsStr = match[2] || "";
+                const args = argsStr
+                    ? argsStr
+                          .split(",")
+                          .map((arg) => parseEventArgs(arg.trim(), data))
+                    : [];
 
-                if (typeof data[functionName] === "function") {
+                if (typeof data[fnName] === "function") {
+                    // Supprimer un éventuel listener existant
                     element.removeEventListener(
                         eventType,
                         element._boundEvents?.[eventType]
                     );
 
-                    const eventHandler = (event) => {
-                        data[functionName].apply(data, [event, ...args]);
+                    const handler = (event) => {
+                        // Modifiers standards
+                        if (
+                            modifiers.includes("self") &&
+                            event.target !== event.currentTarget
+                        )
+                            return;
+                        if (modifiers.includes("prevent"))
+                            event.preventDefault();
+                        if (modifiers.includes("stop")) event.stopPropagation();
+                        if (
+                            modifiers.includes("stopImmediate") &&
+                            event.stopImmediatePropagation
+                        )
+                            event.stopImmediatePropagation();
+
+                        // Pour les événements souris
+                        if (event instanceof MouseEvent) {
+                            if (
+                                modifiers.includes("left") &&
+                                event.button !== 0
+                            )
+                                return;
+                            if (
+                                modifiers.includes("right") &&
+                                event.button !== 2
+                            )
+                                return;
+                            if (
+                                modifiers.includes("middle") &&
+                                event.button !== 1
+                            )
+                                return;
+                        }
+
+                        // Pour les événements clavier
+                        if (event instanceof KeyboardEvent) {
+                            // Vérifier que les modifiers de touches sont activés si spécifiés
+                            if (modifiers.includes("ctrl") && !event.ctrlKey)
+                                return;
+                            if (modifiers.includes("shift") && !event.shiftKey)
+                                return;
+                            if (modifiers.includes("alt") && !event.altKey)
+                                return;
+                            if (modifiers.includes("meta") && !event.metaKey)
+                                return;
+
+                            // Vérifier les touches spécifiques
+                            if (
+                                modifiers.includes("enter") &&
+                                event.key !== "Enter"
+                            )
+                                return;
+                            if (
+                                modifiers.includes("tab") &&
+                                event.key !== "Tab"
+                            )
+                                return;
+                            if (
+                                modifiers.includes("delete") &&
+                                event.key !== "Delete" &&
+                                event.key !== "Backspace"
+                            )
+                                return;
+                            if (
+                                modifiers.includes("esc") &&
+                                event.key !== "Escape"
+                            )
+                                return;
+                            if (
+                                modifiers.includes("space") &&
+                                !(
+                                    event.key === " " ||
+                                    event.key === "Spacebar" ||
+                                    event.key === "Space"
+                                )
+                            )
+                                return;
+                            if (
+                                modifiers.includes("up") &&
+                                event.key !== "ArrowUp"
+                            )
+                                return;
+                            if (
+                                modifiers.includes("down") &&
+                                event.key !== "ArrowDown"
+                            )
+                                return;
+                            // Pour clavier, on réutilise "left" et "right" pour ArrowLeft/ArrowRight
+                            if (
+                                modifiers.includes("left") &&
+                                event.key !== "ArrowLeft"
+                            )
+                                return;
+                            if (
+                                modifiers.includes("right") &&
+                                event.key !== "ArrowRight"
+                            )
+                                return;
+
+                            // exact : seules les touches spécifiées doivent être activées
+                            if (modifiers.includes("exact")) {
+                                // On définit quels modifiers doivent être activés selon la présence dans l'attribut
+                                const mustCtrl = modifiers.includes("ctrl");
+                                const mustShift = modifiers.includes("shift");
+                                const mustAlt = modifiers.includes("alt");
+                                const mustMeta = modifiers.includes("meta");
+                                if (
+                                    event.ctrlKey !== mustCtrl ||
+                                    event.shiftKey !== mustShift ||
+                                    event.altKey !== mustAlt ||
+                                    event.metaKey !== mustMeta
+                                ) {
+                                    return;
+                                }
+                            }
+                        }
+
+                        data[fnName](event, ...args);
                     };
 
-                    element.addEventListener(eventType, eventHandler);
+                    element._boundEvents = {
+                        ...element._boundEvents,
+                        [eventType]: handler,
+                    };
 
-                    element._boundEvents = element._boundEvents || {};
-                    element._boundEvents[eventType] = eventHandler;
+                    const options = {};
+                    if (modifiers.includes("capture")) options.capture = true;
+                    if (modifiers.includes("once")) options.once = true;
+                    if (modifiers.includes("passive")) options.passive = true;
+
+                    element.addEventListener(eventType, handler, options);
                 } else {
                     console.warn(
-                        `Potion: function '${functionName}' not found in data.`
+                        `Potion: function '${fnName}' not found in data.`
                     );
                 }
-            }
-        });
+                // Supprimer l'attribut pour éviter sa réinjection dans le DOM lors des diffings
+                element.removeAttribute(attr.name);
+            });
     }
 
     function Potion(template, data) {
@@ -252,32 +369,30 @@ var potion = (function initPotion(template, data, customSettings = {}) {
         return applyFilter("templateAfter", template);
     }
 
-    function replaceWithDiv(template, content, stgs = {}) {
-        if (!(template instanceof HTMLTemplateElement)) {
-            console.error("L'élément fourni n'est pas un `<template>`.");
-            return;
-        }
+    function createContainerFromTemplate(
+        templateElement,
+        templateName,
+        data,
+        customSettings = {}
+    ) {
+        // Générer le rendu initial avec Potion
+        const renderedHTML = Potion(templateName, data, customSettings);
 
-        const tagName = stgs.tag || "div";
-        const newElement = document.createElement(tagName);
-        newElement.innerHTML = content;
+        // Créer un conteneur pour le rendu
+        const container = document.createElement("div");
+        container.innerHTML = renderedHTML;
 
-        [...template.attributes].forEach((attr) => {
-            if (attr.name !== "type") {
-                newElement.setAttribute(attr.name, attr.value);
-            }
-        });
+        // Binder les événements sur le conteneur lui-même...
+        bindEvents(container, data);
+        // ...et sur tous ses descendants
+        container
+            .querySelectorAll("*")
+            .forEach((child) => bindEvents(child, data));
 
-        if (stgs.class) {
-            newElement.classList.add(...stgs.class.split(" "));
-        }
-        /* events */
-        [...newElement.querySelectorAll("*")].forEach((child) =>
-            bindEvents(child, data)
-        );
-        template.parentNode.replaceChild(newElement, template);
+        // Remplacer le template par le conteneur dans le DOM
+        templateElement.parentNode.replaceChild(container, templateElement);
 
-        return newElement;
+        return container;
     }
 
     if (window && window.document) {
@@ -306,131 +421,137 @@ var potion = (function initPotion(template, data, customSettings = {}) {
                 throw new Error(
                     `Potion: template with name '${name}' not found`
                 );
-
-            const templateRendered = Potion(name, data, customSettings);
-            return replaceWithDiv(
+            return createContainerFromTemplate(
                 templateElement,
-                templateRendered,
+                name,
+                data,
                 customSettings
             );
         };
 
         /**
-         * FIBER
+         * FIBER VIRTUAL DOM
          * @param {*} templateName
          * @param {*} data
          */
 
-        Potion.reactivity = renderPotionTemplate;
+        Potion.sync = renderSync;
 
-        function renderPotionTemplate(templateName, data) {
+        function renderSync(templateName, data) {
+            // Récupérer le template dans le DOM
             const templateElement = document.querySelector(
                 `template[data-name='${templateName}']`
             );
-            if (!templateElement)
+            if (!templateElement) {
                 throw new Error(
                     `Potion: template with name '${templateName}' not found`
                 );
-
-            const templateContent =
-                templates[templateName] || templateElement.innerHTML;
-
-            const fiberRoot = {
-                dom: templateElement.parentNode,
-                props: { children: [templateContent] },
-                alternate: null,
-            };
-
-            function createDom(fiber) {
-                const div = document.createElement("div");
-                div.setAttribute("data-name", templateName);
-                div.innerHTML = substitute(fiber.props.children[0], data);
-                return div;
             }
 
-            function commitRoot() {
-                commitWork(fiberRoot.child);
-            }
+            // Créer un conteneur qui recevra le rendu et remplacer le template dans le DOM
+            const containerElement = createContainerFromTemplate(
+                templateElement,
+                templateName,
+                data
+            );
 
-            function commitWork(fiber) {
-                if (!fiber) return;
-
-                const parentDom = fiber.parent.dom;
-                if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
-                    parentDom.appendChild(fiber.dom);
-                } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
-                    const newDom = createDom(fiber);
-                    if (parentDom.contains(fiber.dom)) {
-                        parentDom.replaceChild(newDom, fiber.dom);
-                    } else {
-                        parentDom.appendChild(newDom);
-                    }
-                    fiber.dom = newDom;
+            // --- Diffing algorithm minimal ---
+            // Compare deux nœuds et met à jour le nœud existant avec les modifications du nouveau nœud.
+            function diffNodes(oldNode, newNode) {
+                // Si les types ou noms diffèrent, remplacer le nœud complet
+                if (
+                    oldNode.nodeType !== newNode.nodeType ||
+                    oldNode.nodeName !== newNode.nodeName
+                ) {
+                    oldNode.parentNode.replaceChild(
+                        newNode.cloneNode(true),
+                        oldNode
+                    );
+                    return;
                 }
+                // Si c'est un nœud texte, comparer le contenu
+                if (oldNode.nodeType === Node.TEXT_NODE) {
+                    if (oldNode.textContent !== newNode.textContent) {
+                        oldNode.textContent = newNode.textContent;
+                    }
+                    return;
+                }
+                // Pour un élément, mettre à jour les attributs (en ignorant ceux commençant par "@")
+                if (oldNode.nodeType === Node.ELEMENT_NODE) {
+                    // Mettre à jour ou ajouter les attributs (sauf les @)
+                    Array.from(newNode.attributes).forEach((attr) => {
+                        if (attr.name.startsWith("@")) return;
+                        if (oldNode.getAttribute(attr.name) !== attr.value) {
+                            oldNode.setAttribute(attr.name, attr.value);
+                        }
+                    });
+                    // Supprimer les attributs absents dans newNode (en ignorant ceux commençant par "@")
+                    Array.from(oldNode.attributes).forEach((attr) => {
+                        if (attr.name.startsWith("@")) return;
+                        if (!newNode.hasAttribute(attr.name)) {
+                            oldNode.removeAttribute(attr.name);
+                        }
+                    });
+                    // Traiter les enfants
+                    const oldChildren = oldNode.childNodes;
+                    const newChildren = newNode.childNodes;
+                    const max = Math.max(
+                        oldChildren.length,
+                        newChildren.length
+                    );
+                    for (let i = 0; i < max; i++) {
+                        if (i >= oldChildren.length) {
+                            // Ajouter le nouveau nœud manquant
+                            oldNode.appendChild(newChildren[i].cloneNode(true));
+                        } else if (i >= newChildren.length) {
+                            // Supprimer l'excédent de nœuds
+                            oldNode.removeChild(oldChildren[i]);
+                        } else {
+                            // Comparer récursivement
+                            diffNodes(oldChildren[i], newChildren[i]);
+                        }
+                    }
+                }
+            }
 
-                commitWork(fiber.child);
-                commitWork(fiber.sibling);
-                [...fiberRoot.dom.querySelectorAll("*")].forEach((child) =>
-                    bindEvents(child, data)
+            // Fonction qui applique le diff entre l'état actuel du conteneur et le nouveau rendu
+            function updateDOM(newHTML) {
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(
+                    `<div>${newHTML}</div>`,
+                    "text/html"
                 );
+                const newContainer = newDoc.body.firstChild;
+                diffNodes(containerElement, newContainer);
             }
 
-            function workLoop() {
-                if (!fiberRoot.child) {
-                    fiberRoot.child = {
-                        dom: createDom(fiberRoot),
-                        parent: fiberRoot,
-                        props: fiberRoot.props,
-                        effectTag: "PLACEMENT",
-                    };
-                }
-                commitRoot();
+            // --- Création d'un Proxy réactif profond ---
+            function deepProxy(target) {
+                if (typeof target !== "object" || target === null)
+                    return target;
+                return new Proxy(target, {
+                    get(obj, prop) {
+                        const value = Reflect.get(obj, prop);
+                        return deepProxy(value);
+                    },
+                    set(obj, prop, value) {
+                        const oldValue = obj[prop];
+                        const result = Reflect.set(obj, prop, value);
+                        if (oldValue !== value) {
+                            const updatedHTML = Potion(templateName, data);
+                            updateDOM(updatedHTML);
+                            // Réassocier les événements après mise à jour
+                            bindEvents(containerElement, data);
+                            containerElement
+                                .querySelectorAll("*")
+                                .forEach((child) => bindEvents(child, data));
+                        }
+                        return result;
+                    },
+                });
             }
 
-            function arrayProxy(target, key, value) {
-                if (Array.isArray(value)) {
-                    value = new Proxy(value, arrayProxyHandler);
-                }
-                target[key] = value;
-                fiberRoot.child.effectTag = "UPDATE";
-                workLoop();
-                return true;
-            }
-
-            const arrayProxyHandler = {
-                set(target, key, value) {
-                    if (key === "length" || target[key] === value) return true;
-                    target[key] = value;
-                    fiberRoot.child.effectTag = "UPDATE";
-                    workLoop();
-                    return true;
-                },
-                get(target, key) {
-                    if (typeof target[key] === "function") {
-                        return function (...args) {
-                            const result = target[key].apply(target, args);
-                            fiberRoot.child.effectTag = "UPDATE";
-                            workLoop();
-                            return result;
-                        };
-                    }
-                    return target[key];
-                },
-            };
-
-            const proxy = new Proxy(data, {
-                set: arrayProxy,
-                get(target, key) {
-                    if (Array.isArray(target[key])) {
-                        return new Proxy(target[key], arrayProxyHandler);
-                    }
-                    return target[key];
-                },
-            });
-
-            workLoop();
-
-            return proxy;
+            return deepProxy(data);
         }
     }
 
