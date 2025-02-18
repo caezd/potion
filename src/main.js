@@ -3,6 +3,9 @@ function escapeRegex(string) {
 }
 
 var potion = (function initPotion(template, data, customSettings = {}) {
+    const localContexts = new Map();
+    let uniqueCounter = 0;
+
     const defaultSettings = {
         start: "[",
         end: "]",
@@ -112,10 +115,23 @@ var potion = (function initPotion(template, data, customSettings = {}) {
                                     innerTemplate,
                                     token
                                 );
-                                const loop = Potion(innerTemplate, loopData);
+                                // Générer le rendu de l'itération
+                                let loopStr = Potion(innerTemplate, loopData);
+                                // Générer un identifiant unique pour cette itération
+                                const uniqueId = "potion_" + uniqueCounter++;
+                                // Stocker le contexte local dans la Map
+                                localContexts.set(uniqueId, loopData);
+                                // Injecter l'attribut dans la première balise de loopStr sans ajouter de conteneur supplémentaire
+                                if (loopStr) {
+                                    // Cette regex détecte la première balise
+                                    loopStr = loopStr.replace(
+                                        /<([a-zA-Z0-9-]+)/,
+                                        `<$1 data-potion-key="${uniqueId}"`
+                                    );
+                                }
                                 subTemplate += applyFilter(
                                     "loop",
-                                    loop,
+                                    loopStr,
                                     token,
                                     loopData
                                 );
@@ -139,6 +155,21 @@ var potion = (function initPotion(template, data, customSettings = {}) {
         }
 
         return template;
+    }
+
+    function getLocalContext(element, defaultData) {
+        let el = element;
+        while (el && el !== document.body) {
+            const key = el.getAttribute("data-potion-key");
+            if (key) {
+                const context = localContexts.get(key);
+                if (context !== undefined) {
+                    return context;
+                }
+            }
+            el = el.parentElement;
+        }
+        return defaultData;
     }
 
     function templatesCache(key, value) {
@@ -190,10 +221,11 @@ var potion = (function initPotion(template, data, customSettings = {}) {
                 }
                 const fnName = match[1];
                 const argsStr = match[2] || "";
+                const localData = getLocalContext(element, data);
                 const args = argsStr
                     ? argsStr
                           .split(",")
-                          .map((arg) => parseEventArgs(arg.trim(), data))
+                          .map((arg) => parseEventArgs(arg.trim(), localData))
                     : [];
 
                 if (typeof data[fnName] === "function") {
@@ -376,15 +408,18 @@ var potion = (function initPotion(template, data, customSettings = {}) {
         customSettings = {}
     ) {
         // Générer le rendu initial avec Potion
-        const renderedHTML = Potion(templateName, data, customSettings);
+        const renderedHTML = Potion(
+            templateElement.innerHTML,
+            data,
+            customSettings
+        );
 
         // Créer un conteneur pour le rendu
         const container = document.createElement("div");
         container.innerHTML = renderedHTML;
 
-        // Binder les événements sur le conteneur lui-même...
+        // Binder les événements sur le conteneur et ses descendants...
         bindEvents(container, data);
-        // ...et sur tous ses descendants
         container
             .querySelectorAll("*")
             .forEach((child) => bindEvents(child, data));
