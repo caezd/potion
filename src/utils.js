@@ -26,3 +26,14 @@ export function debounce(func, wait) {
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 }
+
+/**
+ * Vérifie si une chaîne correspond à un tag HTML valide.
+ *
+ * @param {string} tagName Le nom du tag à tester.
+ * @returns {boolean} true si c'est un élément valide, false sinon.
+ */
+export function isValidHTMLElement(tagName) {
+    const el = document.createElement(tagName);
+    return !(el instanceof HTMLUnknownElement);
+}

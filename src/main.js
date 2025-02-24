@@ -1,8 +1,8 @@
-import { escapeRegex } from "./utils.js";
 import { addFilter, applyFilter } from "./filters.js";
-import { substitute, localContextsMap } from "./parser.js";
-import { bindEvents, getLocalContext, parseEventArgs } from "./events.js";
-import { updateDOM, diffNodes } from "./dom.js";
+import { isValidHTMLElement } from "./utils.js";
+import { substitute } from "./parser.js";
+import { bindEvents } from "./events.js";
+import { updateDOM } from "./dom.js";
 import { deepProxy } from "./reactivity.js";
 
 let templates = {};
@@ -14,6 +14,8 @@ const defaultSettings = {
     path: "[a-z0-9_$][\\.a-z0-9_]*",
     type: "template/potion",
     attr: "data-name",
+    tag: "div",
+    class: "",
 };
 
 let settings = { ...defaultSettings };
@@ -49,12 +51,39 @@ function Potion(template, data) {
  * @param {Object} data - Les données pour le rendu.
  * @returns {Element} Le conteneur créé.
  */
-function createContainerFromTemplate(templateElement, templateName, data) {
-    const renderedHTML = Potion(templateElement.innerHTML, data);
-    const container = document.createElement("div");
+function createContainerFromTemplate(
+    templateElement,
+    templateName,
+    data,
+    customSettings
+) {
+    const renderedHTML = Potion(
+        templateElement.innerHTML,
+        data,
+        customSettings
+    );
+    let container;
+
+    if (!isValidHTMLElement(customSettings.tag)) {
+        container = document.createElement(customSettings.tag);
+    } else {
+        container = document.createElement(settings.tag);
+    }
     container.innerHTML = renderedHTML;
+
+    [...templateElement.attributes].forEach((attr) => {
+        if (attr.name !== "type") {
+            container.setAttribute(attr.name, attr.value);
+        }
+    });
+
+    if (customSettings && customSettings.class) {
+        container.classList.add(customSettings.class);
+    }
+
     bindEvents(container, data);
     container.querySelectorAll("*").forEach((child) => bindEvents(child, data));
+
     templateElement.parentNode.replaceChild(container, templateElement);
     return container;
 }
@@ -66,7 +95,7 @@ function createContainerFromTemplate(templateElement, templateName, data) {
  * @param {Object} data - Les données.
  * @returns {Object} L'objet réactif.
  */
-function renderSync(templateName, data) {
+function renderSync(templateName, data, customSettings) {
     const templateElement = document.querySelector(
         `template[data-name='${templateName}']`
     );
@@ -76,30 +105,12 @@ function renderSync(templateName, data) {
         );
     }
     // Stocker le contenu original du template
-    const originalTemplateContent = templateElement.innerHTML;
-
     const containerElement = createContainerFromTemplate(
         templateElement,
         templateName,
-        data
+        data,
+        customSettings
     );
-
-    let updateScheduled = false;
-    function scheduleUpdate() {
-        if (!updateScheduled) {
-            updateScheduled = true;
-            requestAnimationFrame(() => {
-                updateScheduled = false;
-                // Utiliser le contenu original pour recalculer le rendu
-                const updatedHTML = Potion(originalTemplateContent, data);
-                updateDOM(containerElement, updatedHTML);
-                bindEvents(containerElement, data);
-                containerElement
-                    .querySelectorAll("*")
-                    .forEach((child) => bindEvents(child, data));
-            });
-        }
-    }
 
     const proxy = deepProxy(data, () => {
         const updatedHTML = Potion(templateElement.innerHTML, data);
@@ -113,35 +124,6 @@ function renderSync(templateName, data) {
 }
 
 /**
- * Charge les templates depuis le DOM.
- *
- * @returns {Object} Un objet associant noms de templates et leur contenu.
- */
-function renderFromDOM() {
-    const type = settings.type;
-    const attr = settings.attr;
-    const elements = document.querySelectorAll(`template[type='${type}']`);
-    const templatesInDom = {};
-    elements.forEach((elem, i) => {
-        const key = elem.getAttribute(attr) || `potion-${i}`;
-        templatesInDom[key] = elem.innerHTML;
-    });
-    templates = templatesInDom;
-    return templatesInDom;
-}
-
-/**
- * Rendu ponctuel depuis une chaîne de template.
- *
- * @param {string} template - Le template sous forme de chaîne.
- * @param {Object} data - Les données.
- * @returns {string} Le template rendu.
- */
-function renderString(template, data) {
-    return Potion(template, data);
-}
-
-/**
  * La fonction principale 'potion' qui effectue un rendu ponctuel.
  *
  * @param {string} template - Le template sous forme de chaîne.
@@ -152,9 +134,8 @@ function potion(template, data) {
     return Potion(template, data);
 }
 
-// Ajout de propriétés à la fonction principale pour exposer l'API
 potion.sync = renderSync;
-potion.render = function (templateName, data) {
+potion.render = function (templateName, data, customSettings) {
     const templateElement = document.querySelector(
         `template[data-name='${templateName}']`
     );
@@ -162,10 +143,14 @@ potion.render = function (templateName, data) {
         throw new Error(
             `Potion: template with name '${templateName}' not found`
         );
-    return createContainerFromTemplate(templateElement, templateName, data);
+    return createContainerFromTemplate(
+        templateElement,
+        templateName,
+        data,
+        customSettings
+    );
 };
-potion.renderFromDOM = renderFromDOM;
-potion.renderString = renderString;
+
 potion.addFilter = addFilter;
 potion.applyFilter = applyFilter;
 
