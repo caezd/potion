@@ -17,7 +17,7 @@ const localContexts = new Map();
  * @param {Object} settings Les paramètres (start, end, path).
  */
 function initPattern(settings) {
-    pattern = new RegExp(
+    return new RegExp(
         `${escapeRegex(settings.start)}\\s*(!?)\\s*(${
             settings.path
         })\\s*${escapeRegex(settings.end)}`,

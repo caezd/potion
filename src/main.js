@@ -57,6 +57,7 @@ function createContainerFromTemplate(
     data,
     customSettings
 ) {
+    customSettings = { ...settings, ...customSettings };
     const renderedHTML = Potion(
         templateElement.innerHTML,
         data,
@@ -64,7 +65,7 @@ function createContainerFromTemplate(
     );
     let container;
 
-    if (!isValidHTMLElement(customSettings.tag)) {
+    if (customSettings.tag && isValidHTMLElement(customSettings.tag)) {
         container = document.createElement(customSettings.tag);
     } else {
         container = document.createElement(settings.tag);
@@ -77,7 +78,7 @@ function createContainerFromTemplate(
         }
     });
 
-    if (customSettings && customSettings.class) {
+    if (customSettings.class) {
         container.classList.add(customSettings.class);
     }
 
