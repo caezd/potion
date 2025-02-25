@@ -57,8 +57,19 @@ export function diffNodes(oldNode, newNode) {
  * @param {string} newHTML Le nouveau HTML généré.
  */
 export function updateDOM(containerElement, newHTML) {
+    const tagName = containerElement.tagName.toLowerCase();
+
     const parser = new DOMParser();
-    const newDoc = parser.parseFromString(`<div>${newHTML}</div>`, "text/html");
+    const newDoc = parser.parseFromString(
+        `<${tagName}>${newHTML}</${tagName}>`,
+        "text/html"
+    );
     const newContainer = newDoc.body.firstChild;
+
+    // Recopier les attributs du container existant
+    [...containerElement.attributes].forEach((attr) => {
+        newContainer.setAttribute(attr.name, attr.value);
+    });
+
     diffNodes(containerElement, newContainer);
 }

@@ -115,6 +115,7 @@ function renderSync(templateName, data, customSettings) {
             `Potion: template with name '${templateName}' not found`
         );
     }
+
     // Injecter $store dans les données
     data = extendStore(data);
 
