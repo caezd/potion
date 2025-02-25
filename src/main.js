@@ -20,10 +20,22 @@ const defaultSettings = {
 
 let settings = { ...defaultSettings };
 
+if (typeof window !== "undefined") {
+    // scan le dom pour les templates de type template/potion
+    document
+        .querySelectorAll(`template[type="${settings.type}"]`)
+        .forEach((el) => {
+            const templateName = el.getAttribute(settings.attr);
+            templates[templateName] = el.innerHTML;
+        });
+
+    console.log(templates);
+}
+
 /**
- * Rendu de template depuis une chaîne.
+ * Rendu de template depuis une chaîne ou un template en cache.
  *
- * @param {string} template - La chaîne du template.
+ * @param {string} template - La chaîne du template ou le templateName en cache.
  * @param {Object} data - Les données pour la substitution.
  * @returns {string} Le template rendu.
  */
@@ -79,7 +91,7 @@ function createContainerFromTemplate(
     });
 
     if (customSettings.class) {
-        container.classList.add(customSettings.class);
+        container.classList.add(customSettings.class.split(" "));
     }
 
     bindEvents(container, data);
