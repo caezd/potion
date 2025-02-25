@@ -1,5 +1,6 @@
 import { addFilter, applyFilter } from "./filters.js";
 import { isValidHTMLElement } from "./utils.js";
+import { extendStore } from "./store.js";
 import { substitute } from "./parser.js";
 import { bindEvents } from "./events.js";
 import { updateDOM } from "./dom.js";
@@ -28,8 +29,6 @@ if (typeof window !== "undefined") {
             const templateName = el.getAttribute(settings.attr);
             templates[templateName] = el.innerHTML;
         });
-
-    console.log(templates);
 }
 
 /**
@@ -40,6 +39,8 @@ if (typeof window !== "undefined") {
  * @returns {string} Le template rendu.
  */
 function Potion(template, data) {
+    // Injecter $store dans les données
+    data = extendStore(data);
     if (!initialized) {
         initialized = true;
         applyFilter("init", template, data);
@@ -59,17 +60,14 @@ function Potion(template, data) {
  * Crée un conteneur à partir d'un template HTML présent dans le DOM.
  *
  * @param {HTMLTemplateElement} templateElement - L'élément template.
- * @param {string} templateName - Le nom du template.
  * @param {Object} data - Les données pour le rendu.
  * @returns {Element} Le conteneur créé.
  */
-function createContainerFromTemplate(
-    templateElement,
-    templateName,
-    data,
-    customSettings
-) {
+function createContainerFromTemplate(templateElement, data, customSettings) {
     customSettings = { ...settings, ...customSettings };
+
+    // Injecter $store dans les données
+    data = extendStore(data);
     const renderedHTML = Potion(
         templateElement.innerHTML,
         data,
@@ -91,7 +89,7 @@ function createContainerFromTemplate(
     });
 
     if (customSettings.class) {
-        container.classList.add(customSettings.class.split(" "));
+        container.classList.add(...customSettings.class.split(" "));
     }
 
     bindEvents(container, data);
@@ -117,10 +115,12 @@ function renderSync(templateName, data, customSettings) {
             `Potion: template with name '${templateName}' not found`
         );
     }
+    // Injecter $store dans les données
+    data = extendStore(data);
+
     // Stocker le contenu original du template
     const containerElement = createContainerFromTemplate(
         templateElement,
-        templateName,
         data,
         customSettings
     );
@@ -156,12 +156,7 @@ potion.render = function (templateName, data, customSettings) {
         throw new Error(
             `Potion: template with name '${templateName}' not found`
         );
-    return createContainerFromTemplate(
-        templateElement,
-        templateName,
-        data,
-        customSettings
-    );
+    return createContainerFromTemplate(templateElement, data, customSettings);
 };
 
 potion.addFilter = addFilter;

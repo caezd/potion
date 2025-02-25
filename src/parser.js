@@ -37,7 +37,6 @@ const tokenCache = new Map();
  * @returns {Array<Object>} Le tableau des segments.
  */
 function tokenizeTemplate(template, settings) {
-    console.log(template.innerHTML);
     // Le pattern capture un flag optionnel ("!" ou "/") suivi du token.
     const pattern = new RegExp(
         `${escapeRegex(settings.start)}\\s*([!\\/]?)\\s*(${
