@@ -3,6 +3,25 @@
  */
 
 /**
+ * Enregistre les références d'éléments dans un objet de données.
+ * Les éléments doivent avoir un attribut "#ref".
+ * @param {Element} container Le container du rendu.
+ * @param {Object} data Les données de l'application.
+ */
+export function registerRefs(container, data) {
+    const refs = {};
+    // Recherche les éléments ayant l'attribut "#ref" dans le container
+    container.querySelectorAll("[\\#ref]").forEach((el) => {
+        const refName = el.getAttribute("#ref");
+        if (refName) {
+            refs[refName] = el;
+            el.removeAttribute("#ref");
+        }
+    });
+    data.$refs = Object.assign({}, data.$refs, refs);
+}
+
+/**
  * Compare deux nœuds DOM et met à jour l'ancien nœud en fonction des différences.
  *
  * @param {Node} oldNode Le nœud existant dans le DOM.
@@ -24,13 +43,13 @@ export function diffNodes(oldNode, newNode) {
     }
     if (oldNode.nodeType === Node.ELEMENT_NODE) {
         Array.from(newNode.attributes).forEach((attr) => {
-            if (attr.name.startsWith("@")) return;
+            if (attr.name.startsWith("@") || attr.name.startsWith("#")) return;
             if (oldNode.getAttribute(attr.name) !== attr.value) {
                 oldNode.setAttribute(attr.name, attr.value);
             }
         });
         Array.from(oldNode.attributes).forEach((attr) => {
-            if (attr.name.startsWith("@")) return;
+            if (attr.name.startsWith("@") || attr.name.startsWith("#")) return;
             if (!newNode.hasAttribute(attr.name)) {
                 oldNode.removeAttribute(attr.name);
             }

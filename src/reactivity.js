@@ -1,5 +1,3 @@
-import { debounce } from "./utils.js";
-
 /**
  * @module reactivity
  */

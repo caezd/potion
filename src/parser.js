@@ -5,25 +5,8 @@
 import { escapeRegex } from "./utils.js";
 import { applyFilter } from "./filters.js";
 
-let pattern;
-/** @type {Object<string, string>} */
-const templatesCache = {};
 let uniqueCounter = 0;
 const localContexts = new Map();
-
-/**
- * Initialise le pattern de tokenisation selon les settings.
- *
- * @param {Object} settings Les paramètres (start, end, path).
- */
-function initPattern(settings) {
-    return new RegExp(
-        `${escapeRegex(settings.start)}\\s*(!?)\\s*(${
-            settings.path
-        })\\s*${escapeRegex(settings.end)}`,
-        "gi"
-    );
-}
 
 // Cache pour la tokenisation des templates
 const tokenCache = new Map();

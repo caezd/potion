@@ -77,7 +77,6 @@ export function bindEvents(element, data) {
                     : typeof data[fnName] === "function"
                     ? data[fnName]
                     : null;
-
             if (typeof callback === "function") {
                 element.removeEventListener(
                     eventType,
@@ -97,7 +96,9 @@ export function bindEvents(element, data) {
                     )
                         event.stopImmediatePropagation();
                     // Autres vérifications pour MouseEvent/KeyboardEvent...
-                    callback.call(localData, event, ...args);
+                    const context = { ...data, ...localData };
+
+                    callback.call(context, event, ...args);
                 };
                 element._boundEvents = {
                     ...element._boundEvents,

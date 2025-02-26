@@ -3,7 +3,7 @@ import { isValidHTMLElement } from "./utils.js";
 import { extendStore } from "./store.js";
 import { substitute } from "./parser.js";
 import { bindEvents } from "./events.js";
-import { updateDOM } from "./dom.js";
+import { updateDOM, registerRefs } from "./dom.js";
 import { deepProxy } from "./reactivity.js";
 
 let templates = {};
@@ -92,6 +92,10 @@ function createContainerFromTemplate(templateElement, data, customSettings) {
         container.classList.add(...customSettings.class.split(" "));
     }
 
+    data.$root = container;
+
+    registerRefs(container, data);
+
     bindEvents(container, data);
     container.querySelectorAll("*").forEach((child) => bindEvents(child, data));
 
@@ -119,21 +123,33 @@ function renderSync(templateName, data, customSettings) {
     // Injecter $store dans les données
     data = extendStore(data);
 
-    // Stocker le contenu original du template
+    const originalTemplateContent = templateElement.innerHTML;
+
+    // Déclare une fonction mutable pour onChange
+    let onChangeCallback = () => {};
+
+    // Crée le proxy avec un callback qui délègue à onChangeCallback
+    const proxy = deepProxy(data, () => {
+        onChangeCallback();
+    });
+
+    // Crée le container en passant le proxy (qui sera utilisé pour le rendu initial)
     const containerElement = createContainerFromTemplate(
         templateElement,
-        data,
+        proxy,
         customSettings
     );
 
-    const proxy = deepProxy(data, () => {
-        const updatedHTML = Potion(templateElement.innerHTML, data);
+    // Maintenant, on définit onChangeCallback pour utiliser containerElement
+    onChangeCallback = () => {
+        const updatedHTML = Potion(originalTemplateContent, proxy);
         updateDOM(containerElement, updatedHTML);
-        bindEvents(containerElement, data);
+        bindEvents(containerElement, proxy);
         containerElement
             .querySelectorAll("*")
-            .forEach((child) => bindEvents(child, data));
-    });
+            .forEach((child) => bindEvents(child, proxy));
+    };
+
     return proxy;
 }
 
