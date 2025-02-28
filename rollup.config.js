@@ -13,13 +13,6 @@ const plugins = [
 
 export default [
     {
-        input: "src/test.js",
-        output: [
-            { name: "MiniTemplate", file: "potion/test.js", format: "iife" },
-        ],
-        plugins: plugins,
-    },
-    {
         input: "src/main.js",
         output: [
             {

@@ -27,7 +27,7 @@ export function registerRefs(container, data) {
  * @param {Node} oldNode Le nœud existant dans le DOM.
  * @param {Node} newNode Le nouveau nœud généré.
  */
-export function diffNodes(oldNode, newNode) {
+function diffNodes(oldNode, newNode) {
     if (
         oldNode.nodeType !== newNode.nodeType ||
         oldNode.nodeName !== newNode.nodeName
@@ -54,8 +54,8 @@ export function diffNodes(oldNode, newNode) {
                 oldNode.removeAttribute(attr.name);
             }
         });
-        const oldChildren = oldNode.childNodes;
-        const newChildren = newNode.childNodes;
+        const oldChildren = Array.from(oldNode.childNodes);
+        const newChildren = Array.from(newNode.childNodes);
         const max = Math.max(oldChildren.length, newChildren.length);
         for (let i = 0; i < max; i++) {
             if (i >= oldChildren.length) {
