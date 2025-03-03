@@ -53,7 +53,20 @@ addFilter("token", (token, data, tag) => {
         }
         dataLookup = dataLookup[path[i]];
     }
+    if (dataLookup instanceof HTMLElement) {
+        return dataLookup.outerHTML;
+    }
     return dataLookup;
 });
+
+addFilter("uppercase", (value) =>
+    typeof value === "string" ? value.toUpperCase() : value
+);
+addFilter("uppercase", (value) =>
+    typeof value === "string" ? value.toLowerCase() : value
+);
+addFilter("trim", (value) =>
+    typeof value === "string" ? value.trim() : value
+);
 
 export { filters };

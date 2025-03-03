@@ -88,25 +88,32 @@ export function substitute(template, data, settings) {
 
     while (index < tokens.length) {
         const segment = tokens[index];
+
         if (segment.type === "static") {
             output += segment.value;
             index++;
         } else if (segment.type === "token") {
-            // Si c'est un token de fermeture, on l'ignore
+            // Ignore le token de fermeture
             if (segment.flag === "/") {
                 index++;
                 continue;
             }
-            // Chercher le bloc correspondant (token de fermeture avec le même value)
+
+            // Découpe la valeur du token pour extraire la clé et la chaîne de filtres
+            const parts = segment.value.split("|").map((s) => s.trim());
+            const tokenKey = parts[0];
+
+            // Recherche d'un bloc de fermeture associé (pour les blocs conditionnels ou les boucles)
             let innerTokens = [];
             let j = index + 1;
             let foundClosing = false;
             while (j < tokens.length) {
                 const nextSegment = tokens[j];
+                // Pour la fermeture, on compare uniquement la clé sans filtres
                 if (
                     nextSegment.type === "token" &&
                     nextSegment.flag === "/" &&
-                    nextSegment.value === segment.value
+                    nextSegment.value.trim() === tokenKey
                 ) {
                     foundClosing = true;
                     break;
@@ -114,30 +121,36 @@ export function substitute(template, data, settings) {
                 innerTokens.push(nextSegment);
                 j++;
             }
+
             let substituted;
             try {
-                substituted = applyFilter(
-                    "token",
-                    segment.value,
-                    data,
-                    template
-                );
+                // On récupère la valeur initiale du token via le filtre par défaut "token"
+                substituted = applyFilter("token", tokenKey, data, template);
             } catch (e) {
                 console.warn(e.message);
                 substituted = "";
             }
+
+            // Si des filtres additionnels sont présents, on les applique successivement
+            for (let i = 1; i < parts.length; i++) {
+                substituted = applyFilter(
+                    parts[i],
+                    substituted,
+                    data,
+                    template
+                );
+            }
+
             if (foundClosing) {
-                // Reconstituer le contenu du bloc à partir des innerTokens
+                // Cas d'un bloc
                 const innerTemplate = innerTokens
-                    .map((tok) => {
-                        if (tok.type === "static") {
-                            return tok.value;
-                        } else {
-                            return `${settings.start}${
-                                tok.flag ? tok.flag : ""
-                            }${tok.value}${settings.end}`;
-                        }
-                    })
+                    .map((tok) =>
+                        tok.type === "static"
+                            ? tok.value
+                            : `${settings.start}${tok.flag ? tok.flag : ""}${
+                                  tok.value
+                              }${settings.end}`
+                    )
                     .join("");
 
                 if (typeof substituted === "boolean") {
@@ -145,10 +158,9 @@ export function substitute(template, data, settings) {
                         ? substitute(innerTemplate, data, settings)
                         : "";
                 } else if (typeof substituted === "object") {
-                    // Cas de boucle : substitution pour chaque clé de l'objet
+                    // Cas de boucle (itération sur un objet)
                     for (const key in substituted) {
                         if (substituted.hasOwnProperty(key)) {
-                            // Construire les données locales pour cette itération
                             const loopData = Object.assign(
                                 {},
                                 substituted[key],
@@ -157,17 +169,13 @@ export function substitute(template, data, settings) {
                                     _value: substituted[key],
                                 }
                             );
-                            // Rendu du bloc pour cette itération (récursivité sur le innerTemplate)
                             let renderedBlock = substitute(
                                 innerTemplate,
                                 loopData,
                                 settings
                             ).trim();
-                            // Générer un identifiant unique
                             const uniqueId = "potion_" + uniqueCounter++;
-                            // Stocker le contexte local dans la Map
                             localContexts.set(uniqueId, loopData);
-                            // Injecter data-potion-key dans la première balise du rendu
                             renderedBlock = renderedBlock.replace(
                                 /^\s*<([a-zA-Z0-9-]+)/,
                                 `<$1 data-potion-key="${uniqueId}"`
@@ -180,7 +188,7 @@ export function substitute(template, data, settings) {
                 }
                 index = j + 1; // Passer après le token de fermeture
             } else {
-                // Pas de bloc trouvé : substitution simple
+                // Cas de substitution simple
                 output += substituted;
                 index++;
             }

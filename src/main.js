@@ -12,7 +12,7 @@ let initialized = false;
 const defaultSettings = {
     start: "[",
     end: "]",
-    path: "[a-z0-9_$][\\.a-z0-9_]*",
+    path: "[^\\]]+",
     type: "template/potion",
     attr: "data-name",
     tag: "div",
