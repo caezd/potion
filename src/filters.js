@@ -62,7 +62,7 @@ addFilter("token", (token, data, tag) => {
 addFilter("uppercase", (value) =>
     typeof value === "string" ? value.toUpperCase() : value
 );
-addFilter("uppercase", (value) =>
+addFilter("lowercase", (value) =>
     typeof value === "string" ? value.toLowerCase() : value
 );
 addFilter("trim", (value) =>

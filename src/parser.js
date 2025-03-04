@@ -72,6 +72,44 @@ function getTokens(template, settings) {
     return tokens;
 }
 
+// Fonction pour extraire les templates imbriqués et les protéger
+function protectNestedTemplates(templateStr) {
+    const nestedTemplates = {};
+    let counter = 0;
+    // On utilise une regex qui capture les balises <template> imbriquées
+    const regex = /<template\b[^>]*>([\s\S]*?)<\/template>/gi;
+    const protectedStr = templateStr.replace(regex, (match) => {
+        const placeholder = `__NESTED_TEMPLATE_${counter}__`;
+        nestedTemplates[placeholder] = match;
+        counter++;
+        return placeholder;
+    });
+    return { protectedStr, nestedTemplates };
+}
+
+// Fonction pour restaurer les templates imbriqués après substitution
+function restoreNestedTemplates(templateStr, nestedTemplates) {
+    for (const placeholder in nestedTemplates) {
+        templateStr = templateStr.replace(
+            placeholder,
+            nestedTemplates[placeholder]
+        );
+    }
+    return templateStr;
+}
+
+// Fonction de substitution "protégée"
+export function safeSubstitute(templateStr, data, settings) {
+    // Protéger les templates imbriqués
+    const { protectedStr, nestedTemplates } =
+        protectNestedTemplates(templateStr);
+    // Appliquer la substitution sur le contenu protégé
+    let substituted = substitute(protectedStr, data, settings);
+    // Restaurer les templates imbriqués intacts
+    substituted = restoreNestedTemplates(substituted, nestedTemplates);
+    return substituted;
+}
+
 /**
  * Effectue la substitution sur un template en utilisant les tokens pré-analyzés,
  * et gère les blocs conditionnels et les boucles.

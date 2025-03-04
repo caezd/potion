@@ -1,7 +1,7 @@
 import { addFilter, applyFilter } from "./filters.js";
 import { isValidHTMLElement } from "./utils.js";
 import { extendStore } from "./store.js";
-import { substitute } from "./parser.js";
+import { safeSubstitute } from "./parser.js";
 import { bindEvents } from "./events.js";
 import { updateDOM, registerRefs } from "./dom.js";
 import { deepProxy } from "./reactivity.js";
@@ -51,7 +51,7 @@ function Potion(template, data) {
     }
     template = applyFilter("template", template, data);
     if (template && data !== undefined) {
-        template = substitute(template, data, settings);
+        template = safeSubstitute(template, data, settings);
     }
     return applyFilter("templateAfter", template, data);
 }
