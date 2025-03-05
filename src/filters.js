@@ -59,14 +59,110 @@ addFilter("token", (token, data, tag) => {
     return dataLookup;
 });
 
+/**
+ * Filtres pour string
+ */
+
 addFilter("uppercase", (value) =>
     typeof value === "string" ? value.toUpperCase() : value
 );
+
 addFilter("lowercase", (value) =>
     typeof value === "string" ? value.toLowerCase() : value
 );
+
+addFilter("capitalize", (value) =>
+    typeof value === "string"
+        ? value.charAt(0).toUpperCase() + value.slice(1)
+        : value
+);
+
+addFilter("truncate", (value, data, template, length = 50, ellipsis = "") =>
+    typeof value === "string" && value.length > length
+        ? value.slice(0, length) + ellipsis
+        : value
+);
+
 addFilter("trim", (value) =>
     typeof value === "string" ? value.trim() : value
+);
+
+addFilter("lstrip", (value) =>
+    typeof value === "string" ? value.replace(/^\s+/, "") : value
+);
+
+addFilter("append", (value, data, template, suffix) =>
+    typeof value === "string" ? value + suffix : value
+);
+
+addFilter("default", (value, data, template, defaultValue) =>
+    value === null || value === undefined || value === "" ? defaultValue : value
+);
+
+/**
+ * Filtres pour nombre
+ */
+
+addFilter("abs", (value) =>
+    typeof value === "number" ? Math.abs(value) : value
+);
+
+addFilter("at_least", (value, data, template, min) =>
+    typeof value === "number" ? Math.max(value, Number(min)) : value
+);
+
+addFilter("at_most", (value, data, template, max) =>
+    typeof value === "number" ? Math.min(value, Number(max)) : value
+);
+
+addFilter("ceil", (value) =>
+    typeof value === "number" ? Math.ceil(value) : value
+);
+
+addFilter("floor", (value) =>
+    typeof value === "number" ? Math.floor(value) : value
+);
+
+addFilter("divided_by", (value, data, template, divisor) =>
+    typeof Number(value) === "number" && Number(divisor) !== 0
+        ? value / Number(divisor)
+        : value
+);
+
+addFilter("escape", (value) =>
+    typeof value === "string"
+        ? value
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;")
+        : value
+);
+
+/**
+ * Filtres pour tableaux
+ */
+addFilter("compact", (value) =>
+    Array.isArray(value)
+        ? value.filter((item) => item !== null && item !== undefined)
+        : value
+);
+addFilter("first", (value) => {
+    if (Array.isArray(value)) return value[0];
+    if (typeof value === "string") return value.charAt(0);
+    return value;
+});
+addFilter("last", (value) => {
+    if (Array.isArray(value)) return value[value.length - 1];
+    if (typeof value === "string") return value.charAt(value.length - 1);
+    return value;
+});
+addFilter("join", (value, data, template, delimiter) =>
+    Array.isArray(value) ? value.join(delimiter || "") : value
+);
+addFilter("map", (value, data, template, property) =>
+    Array.isArray(value) ? value.map((item) => item[property]) : value
 );
 
 export { filters };

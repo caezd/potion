@@ -110,6 +110,32 @@ export function safeSubstitute(templateStr, data, settings) {
     return substituted;
 }
 
+function parseFilterArguments(argString) {
+    // On commence par trimper l'ensemble de la chaîne d'arguments
+    argString = argString.trim();
+    const args = [];
+    // Ce regex capture :
+    //  • un argument entre guillemets doubles : "([^"]*)"
+    //  • ou entre guillemets simples : '([^']*)'
+    //  • ou un argument non cité : ([^,]+)
+    // suivis d'une virgule optionnelle et d'espaces
+    const regex = /(?:"([^"]*)"|'([^']*)'|([^,]+))(?:,\s*)?/g;
+    let match;
+    while ((match = regex.exec(argString)) !== null) {
+        if (match[1] !== undefined) {
+            // Argument entre guillemets doubles (le groupe 1 ne contient pas les quotes)
+            args.push(match[1]);
+        } else if (match[2] !== undefined) {
+            // Argument entre guillemets simples
+            args.push(match[2]);
+        } else if (match[3] !== undefined) {
+            // Argument non cité, on applique trim
+            args.push(match[3].trim());
+        }
+    }
+    return args;
+}
+
 /**
  * Effectue la substitution sur un template en utilisant les tokens pré-analyzés,
  * et gère les blocs conditionnels et les boucles.
@@ -171,11 +197,21 @@ export function substitute(template, data, settings) {
 
             // Si des filtres additionnels sont présents, on les applique successivement
             for (let i = 1; i < parts.length; i++) {
+                let filterSpec = parts[i]; // ex. "truncate: 100, \"…\"" ou "join: ', '"
+                let filterName = filterSpec;
+                let filterArgs = [];
+                if (filterSpec.indexOf(":") !== -1) {
+                    let [name, argString] = filterSpec.split(":", 2);
+                    filterName = name.trim();
+                    // Utilisation de la fonction dédiée pour parser les arguments
+                    filterArgs = parseFilterArguments(argString);
+                }
                 substituted = applyFilter(
-                    parts[i],
+                    filterName,
                     substituted,
                     data,
-                    template
+                    template,
+                    ...filterArgs
                 );
             }
 

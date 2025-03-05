@@ -1,6 +1,6 @@
 {
     "name": "@poumon/potion",
-    "version": "1.4.10",
+    "version": "1.5.0",
     "main": "potion.esm.min.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"

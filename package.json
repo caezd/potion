@@ -11,7 +11,8 @@
     "scripts": {
         "build": "rollup -c ",
         "watch": "rollup -c -w",
-        "serve": "http-server ./potion/"
+        "serve": "http-server ./potion/",
+        "test": "jest"
     },
     "author": "Poumon <caedrikbl@gmail.com> (https://poumon.io)",
     "license": "ISC",
@@ -20,14 +21,19 @@
         "url": "git+https://github.com/caezd/potion.git"
     },
     "devDependencies": {
+        "@babel/core": "^7.26.9",
+        "@babel/preset-env": "^7.26.9",
         "@rollup/plugin-commonjs": "^28.0.2",
         "@rollup/plugin-node-resolve": "^16.0.0",
         "@rollup/plugin-terser": "^0.4.4",
+        "babel-jest": "^29.7.0",
         "fs": "^0.0.1-security",
+        "http-serve": "^1.0.1",
+        "jest": "^29.7.0",
+        "jest-environment-jsdom": "^29.7.0",
         "rollup": "^4.30.1",
         "rollup-plugin-multi-input": "^1.5.0",
-        "rollup-plugin-peer-deps-external": "^2.2.4",
-        "http-serve": "^1.0.1"
+        "rollup-plugin-peer-deps-external": "^2.2.4"
     },
     "bugs": {
         "url": "https://github.com/caezd/potion/issues"
