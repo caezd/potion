@@ -91,12 +91,52 @@ addFilter("lstrip", (value) =>
     typeof value === "string" ? value.replace(/^\s+/, "") : value
 );
 
+addFilter("rstrip", (value) =>
+    typeof value === "string" ? value.replace(/\s+$/, "") : value
+);
+
 addFilter("append", (value, data, template, suffix) =>
     typeof value === "string" ? value + suffix : value
 );
 
 addFilter("default", (value, data, template, defaultValue) =>
     value === null || value === undefined || value === "" ? defaultValue : value
+);
+
+addFilter("prepend", (value, data, template, prefix) =>
+    typeof value === "string" ? prefix + value : value
+);
+
+addFilter("remove", (value, data, template, substring) =>
+    typeof value === "string" ? value.split(substring).join("") : value
+);
+
+addFilter("remove_first", (value, data, template, substring) =>
+    typeof value === "string" ? value.replace(substring, "") : value
+);
+
+addFilter("replace", (value, data, template, search, replacement) =>
+    typeof value === "string" ? value.split(search).join(replacement) : value
+);
+
+addFilter("replace_first", (value, data, template, search, replacement) =>
+    typeof value === "string" ? value.replace(search, replacement) : value
+);
+
+addFilter("split", (value, data, template, delimiter) =>
+    typeof value === "string" ? value.split(delimiter) : value
+);
+
+addFilter("strip_html", (value) =>
+    typeof value === "string" ? value.replace(/<[^>]+>/g, "") : value
+);
+
+addFilter("url_decode", (value) =>
+    typeof value === "string" ? decodeURIComponent(value) : value
+);
+
+addFilter("url_encode", (value) =>
+    typeof value === "string" ? encodeURIComponent(value) : value
 );
 
 /**
@@ -129,6 +169,32 @@ addFilter("divided_by", (value, data, template, divisor) =>
         : value
 );
 
+addFilter("minus", (value, data, template, number) =>
+    typeof value === "number" ? value - Number(number) : value
+);
+
+addFilter("modulo", (value, data, template, divisor) =>
+    typeof value === "number" && Number(divisor) !== 0
+        ? value % Number(divisor)
+        : value
+);
+
+addFilter("plus", (value, data, template, number) =>
+    typeof value === "number" ? value + Number(number) : value
+);
+
+addFilter("round", (value, data, template, precision) => {
+    if (typeof value === "number") {
+        precision = Number(precision) || 0;
+        const factor = Math.pow(10, precision);
+        return Math.round(value * factor) / factor;
+    }
+    return value;
+});
+addFilter("times", (value, data, template, multiplier) =>
+    typeof value === "number" ? value * Number(multiplier) : value
+);
+
 addFilter("escape", (value) =>
     typeof value === "string"
         ? value
@@ -139,6 +205,14 @@ addFilter("escape", (value) =>
               .replace(/'/g, "&#39;")
         : value
 );
+
+addFilter("size", (value) => {
+    if (Array.isArray(value)) return value.length;
+    if (typeof value === "string") return value.length;
+    if (typeof value === "object" && value !== null)
+        return Object.keys(value).length;
+    return 0;
+});
 
 /**
  * Filtres pour tableaux
@@ -163,6 +237,29 @@ addFilter("join", (value, data, template, delimiter) =>
 );
 addFilter("map", (value, data, template, property) =>
     Array.isArray(value) ? value.map((item) => item[property]) : value
+);
+addFilter("reverse", (value) => {
+    if (Array.isArray(value)) return [...value].reverse();
+    if (typeof value === "string") return value.split("").reverse().join("");
+    return value;
+});
+addFilter("slice", (value, data, template, start, length) => {
+    if (typeof value === "string")
+        return value.substring(Number(start), Number(length));
+    if (Array.isArray(value))
+        return value.slice(Number(start), Number(start) + Number(length));
+    return value;
+});
+addFilter("sort", (value, data, template, property) => {
+    if (Array.isArray(value)) {
+        return property
+            ? [...value].sort((a, b) => (a[property] > b[property] ? 1 : -1))
+            : [...value].sort();
+    }
+    return value;
+});
+addFilter("unique", (value) =>
+    Array.isArray(value) ? [...new Set(value)] : value
 );
 
 export { filters };
