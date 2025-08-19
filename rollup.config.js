@@ -17,11 +17,11 @@ export default [
         output: [
             {
                 name,
-                file: "potion/potion.min.js",
+                file: "potion/potion.js",
                 format: "iife",
             },
             {
-                file: "potion/potion.esm.min.js",
+                file: "potion/potion.esm.js",
                 format: "es",
             },
         ],
